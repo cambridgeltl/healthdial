@@ -1,0 +1,29 @@
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Node / React
+client/node_modules/
+client/build/
+client/.env
+
+# Runtime configuration and local data
+.env
+*.env
+data/
+logs/
+
+# Deployment-only secrets. Do not commit TLS keys or certificates.
+ssl_certs/
+*.key
+*.pem
+*.crt
+*.csr

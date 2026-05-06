@@ -1,0 +1,12 @@
+@keyframes wave {
+    0% { transform: scaleY(1); }
+    50% { transform: scaleY(1.8); }
+    100% { transform: scaleY(1); }
+}
+
+.wave-bar {
+    width: 2px;
+    background: currentColor;
+    animation: wave 1s infinite;
+    transform-origin: bottom;
+}
