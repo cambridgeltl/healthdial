@@ -1,0 +1,116 @@
+name: healthcare-dialogue-annotation
+
+services:
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    depends_on:
+      - web
+    networks:
+      - app
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_HTTP_PORT:-8080}:80"
+    volumes:
+      - ./nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - client
+      - server
+    networks:
+      - app
+
+  client:
+    build:
+      context: ../client
+      dockerfile: deploy/Dockerfile
+      args:
+        REACT_APP_SERVER_URL: ${REACT_APP_SERVER_URL}
+        REACT_APP_TARGET_LANGUAGE: ${REACT_APP_TARGET_LANGUAGE}
+        REACT_APP_CONTACT_NAME: ${REACT_APP_CONTACT_NAME}
+        REACT_APP_CONTACT_EMAIL: ${REACT_APP_CONTACT_EMAIL}
+    restart: unless-stopped
+    networks:
+      - app
+
+  server:
+    build:
+      context: ../server
+      dockerfile: deploy/Dockerfile
+    command: >
+      gunicorn --bind 0.0.0.0:5000
+      --workers ${SERVER_WORKERS:-2}
+      --pythonpath /server
+      --worker-class eventlet
+      app:app
+      --log-level ${LOG_LEVEL:-info}
+    restart: unless-stopped
+    env_file:
+      - ${APP_ENV_FILE:-.env}
+    volumes:
+      - server_final_submit:/server/final_submit
+      - ./secrets/openai.key:/run/secrets/openai.key:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/ping', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app
+
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    profiles:
+      - local-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-annotation_admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-change-this-password}
+      MONGO_INITDB_DATABASE: ${MONGO_APP_DATABASE:-annotation_tool_healthcare_dialogue}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --username \"$$MONGO_INITDB_ROOT_USERNAME\" --password \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval \"db.adminCommand('ping').ok\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app
+
+  mongo-express:
+    image: mongo-express:1.0.2
+    restart: unless-stopped
+    profiles:
+      - mongo-admin
+    ports:
+      - "127.0.0.1:${MONGO_EXPRESS_PORT:-8081}:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME:-annotation_admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-change-this-password}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME:-annotation_admin}:${MONGO_INITDB_ROOT_PASSWORD:-change-this-password}@mongo:27017/?authSource=admin
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-change-this-password}
+      ME_CONFIG_BASICAUTH: "true"
+    depends_on:
+      - mongo
+    networks:
+      - app
+
+volumes:
+  server_final_submit:
+  mongo_data:
+
+networks:
+  app:
+    driver: bridge
