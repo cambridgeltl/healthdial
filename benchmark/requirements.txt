@@ -1,0 +1,35 @@
+# Core
+torch>=2.1
+transformers>=4.46
+datasets
+huggingface_hub
+tqdm
+numpy
+scipy
+scikit-learn
+
+# Text retrieval / NLP
+rank_bm25
+sentence-transformers
+jieba
+einops
+
+# OpenAI (ASR, TTS, embeddings, knowledge filtering)
+openai
+
+# Audio
+soundfile
+torchaudio
+pydub
+pymcd
+mel_cepstral_distance
+
+# Evaluation
+evaluate
+jiwer
+
+# Optional / per-task (install separately if needed):
+#   flash_attn==2.7.4.post1          # only for Phi-4-MM ASR; see asr/phi_requirement.txt
+#   FlagEmbedding                    # for BGE-M3 retriever (retrieval/retrievers/bge.py)
+#   laion_clap                       # for CLAP speech-to-text retriever (retrieval/retrievers/clap.py)
+#   vllm                             # for faster Llama-3 inference (classification/run_classification_llama.py)

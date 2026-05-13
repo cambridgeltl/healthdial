@@ -1,0 +1,7 @@
+jieba
+rank_bm25
+sentence_transformers
+openai
+datasets
+einops
+transformers==4.46.2
